@@ -25,22 +25,6 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<!--
-{% comment %}
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-{% endcomment %}
--->
-
 # Apache Kudu
 
 [Apache Kudu](https://kudu.apache.org) is a column-oriented, distributed data storage engine, specifically designed for use cases that require fast analytics on fast (rapidly changing) data. It lowers query latency significantly for Apache Flink and similar engines (Apache Impala, Apache NiFi, Apache Spark, and more).
@@ -52,6 +36,10 @@ This connector allows reading and writing to [Kudu](https://kudu.apache.org) by 
 - a table source (`KuduTableSource`),
 - an upsert table sink (`KuduTableSink`),
 - and a catalog (`KuduCatalog`).
+
+It is also possible to use the Kudu connector directly from the DataStream API, however we
+encourage all users to explore the [Table API](#sql-and-table-api) as it provides a lot of useful tooling when working
+with Kudu data.
 
 ## Installing Kudu
 
@@ -68,12 +56,6 @@ To use this connector, add the following dependency to your project:
 
 Note that the streaming connectors are not part of the binary distribution of Flink. You need to link them into your job jar for cluster execution.
 See how to link with them for cluster execution [here](https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/configuration/overview/).
-
-## DataStream API
-
-It is also possible to use the Kudu connector directly from the DataStream API, however we
-encourage all users to explore the [Table API](#sql-and-table-api) as it provides a lot of useful tooling when working
-with Kudu data.
 
 ## SQL and Table API
 
@@ -145,46 +127,3 @@ Note:
 * When getting a table through the Catalog, NOT NULL and PRIMARY KEY constraints are ignored. All columns
   are described as being nullable, and not being primary keys.
 * Kudu tables cannot be altered through the catalog other than simple renaming
-
-### Reading tables into a DataStream
-
-There are 2 main ways of reading a Kudu Table into a DataStream:
-
-1. Using the `KuduCatalog` and the Table API
-2. Using the `KuduRowInputFormat` directly
-
-#### 1. Using the `KuduCatalog` and the Table API
-
-Using the `KuduCatalog` and Table API is the recommended way of reading tables as it automatically guarantees type safety and takes care of configuration of our readers.
-
-This is how it works in practice:
-
-```java
-StreamTableEnvironment tableEnv = StreamTableEnvironment.create(streamEnv, tableSettings);
-
-tableEnv.registerCatalog("kudu", new KuduCatalog("master:port"));
-tableEnv.useCatalog("kudu");
-
-Table table = tableEnv.sqlQuery("SELECT * FROM MyKuduTable");
-DataStream<Row> rows = tableEnv.toAppendStream(table, Row.class);
-```
-
-#### 2. Using the `KuduRowInputFormat` directly
-
-The second way of achieving the same thing is by using the `KuduRowInputFormat` directly. In this case we have to manually provide all information about our table:
-
-```java
-KuduTableInfo tableInfo = ...
-KuduReaderConfig readerConfig = ...
-KuduRowInputFormat inputFormat = new KuduRowInputFormat(readerConfig, tableInfo);
-
-DataStream<Row> rowStream = env.createInput(inputFormat, rowTypeInfo);
-```
-
-The `KuduTableSource` is a convenient wrapper around `KuduRowInputFormat`.
-
-### Kudu Sink
-
-The connector provides a `KuduSink` class that can be used to consume DataStreams and write the results into a Kudu table.
-
-For more information, please refer to [Kudu Sink]({% link /docs/connectors/table/kudu/kudu-sink.html %}).
